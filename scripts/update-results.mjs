@@ -6,7 +6,7 @@
 // muina hetkinä skripti lopettaa heti ilman muutoksia. Käsiajossa
 // (workflow_dispatch) tarkistus ohitetaan FORCE_RUN-muuttujalla.
 
-import { readFileSync, writeFileSync, existsSync } from "fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
 
 const CSV_PATH = new URL("../data/ottelut.csv", import.meta.url);
 const FORCE_RUN = process.env.FORCE_RUN === "true";
@@ -117,6 +117,7 @@ async function main() {
 
   const all = [...existing, ...newRows].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
   const csv = all.map((r) => `${r.date};${r.home};${r.hg};${r.away};${r.ag}`).join("\n") + "\n";
+  mkdirSync(new URL("../data/", import.meta.url), { recursive: true });
   writeFileSync(CSV_PATH, csv, "utf-8");
 
   console.log(`Lisätty ${newRows.length} uutta ottelua:`);
