@@ -1,0 +1,38 @@
+name: Päivitä Liiga-tulokset
+
+on:
+  schedule:
+    - cron: "50 20 * * *"
+    - cron: "50 21 * * *"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Aja päivitys kellonajasta riippumatta"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Kloonaa repo
+        uses: actions/checkout@v4
+
+      - name: Aseta Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Hae uudet tulokset liiga.fi:stä
+        env:
+          FORCE_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.force || 'false' }}
+        run: node scripts/update-results.mjs
+
+      - name: Committaa muutokset, jos uusia tuloksia löytyi
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Päivitä ottelutulokset (automaattinen)"
+          file_pattern: "data/ottelut.csv"
