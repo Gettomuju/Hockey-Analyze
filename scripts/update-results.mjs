@@ -43,18 +43,22 @@ async function fetchGamesForDate(date) {
   });
 
   const rawText = await res.text();
-  let games;
+  let parsed;
   try {
-    games = JSON.parse(rawText);
+    parsed = JSON.parse(rawText);
   } catch (e) {
     console.error(`(${date}) Vastaus ei ollut JSONia. HTTP ${res.status}. Ensimmäiset 500 merkkiä:`);
     console.error(rawText.slice(0, 500));
     return [];
   }
 
+  // liiga.fi:n date-parametrilla haettu rajapinta kääntää tulokset {games:[...]}-objektiin,
+  // week-parametrilla haettu palauttaa suoran taulukon — tuetaan molempia.
+  const games = Array.isArray(parsed) ? parsed : parsed.games;
+
   if (!Array.isArray(games)) {
-    console.error(`(${date}) Vastaus ei ollut taulukko. HTTP ${res.status}. Sisältö:`);
-    console.error(JSON.stringify(games).slice(0, 500));
+    console.error(`(${date}) Vastauksesta ei löytynyt otteluita. HTTP ${res.status}. Sisältö:`);
+    console.error(JSON.stringify(parsed).slice(0, 500));
     return [];
   }
 
