@@ -276,6 +276,21 @@ document.getElementById("logToggle").addEventListener("click", () => {
 });
 
 init();
+
+// Päivitä data automaattisesti kun ikkuna tuodaan takaisin näkyviin (esim. avattu
+// työpöytäkuvakkeesta useiden päivien jälkeen), sekä varmuuden vuoksi 30 min välein
+// jos ikkuna jätetään auki pitkäksi aikaa. Näin F5:ää ei tarvitse painaa käsin.
+let lastRefresh = Date.now();
+function maybeRefresh() {
+  if (Date.now() - lastRefresh > 5 * 60 * 1000) {
+    lastRefresh = Date.now();
+    init();
+  }
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") maybeRefresh();
+});
+setInterval(() => { lastRefresh = Date.now(); init(); }, 30 * 60 * 1000);
 </script>
 </body>
 </html>
