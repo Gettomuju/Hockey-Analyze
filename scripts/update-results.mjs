@@ -33,12 +33,31 @@ function dateMinus(dateStr, days) {
 
 async function fetchGamesForDate(date) {
   const url = `https://liiga.fi/api/v2/games?tournament=runkosarja&date=${date}`;
-  const res = await fetch(url, { headers: { accept: "application/json" } });
-  if (!res.ok) {
-    console.error(`Haku epäonnistui (${date}): HTTP ${res.status}`);
+  const res = await fetch(url, {
+    headers: {
+      accept: "application/json",
+      "user-agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      referer: "https://liiga.fi/fi",
+    },
+  });
+
+  const rawText = await res.text();
+  let games;
+  try {
+    games = JSON.parse(rawText);
+  } catch (e) {
+    console.error(`(${date}) Vastaus ei ollut JSONia. HTTP ${res.status}. Ensimmäiset 500 merkkiä:`);
+    console.error(rawText.slice(0, 500));
     return [];
   }
-  const games = await res.json();
+
+  if (!Array.isArray(games)) {
+    console.error(`(${date}) Vastaus ei ollut taulukko. HTTP ${res.status}. Sisältö:`);
+    console.error(JSON.stringify(games).slice(0, 500));
+    return [];
+  }
+
   return games
     .filter((g) => g.ended)
     .map((g) => ({
