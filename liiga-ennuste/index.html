@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Liiga-ennuste</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+  :root {
+    --bg: #0B111E; --panel: #131B2C; --panel-border: #243049;
+    --ice: #7FE0F0; --amber: #F2A65A; --frost: #EDF3F8; --steel: #8A97AE;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); font-family: 'Inter', system-ui, sans-serif;
+    min-height: 100vh; display: flex; justify-content: center; padding: 24px 16px;
+  }
+  .display { font-family: 'Oswald', system-ui, sans-serif; }
+  .wrap { width: 100%; max-width: 380px; }
+  h1 { color: var(--frost); font-size: 24px; margin: 0; }
+  .subtitle { color: var(--steel); font-size: 14px; margin: 4px 0 20px; line-height: 1.4; }
+  .card { background: var(--panel); border: 1px solid var(--panel-border); border-radius: 16px; padding: 16px; margin-bottom: 12px; }
+  .label { font-size: 12px; font-weight: 500; letter-spacing: 0.02em; display: block; margin-bottom: 6px; }
+  select {
+    width: 100%; background: #0F1728; border: 1px solid var(--panel-border); color: var(--frost);
+    border-radius: 12px; padding: 12px; font-family: 'Oswald', sans-serif; font-size: 18px; font-weight: 600;
+    appearance: none; -webkit-appearance: none;
+  }
+  .divider { display: flex; align-items: center; justify-content: center; padding: 4px 0 12px; }
+  .divider .line { flex: 1; height: 1px; background: var(--panel-border); }
+  .divider .dot-outer { width: 24px; height: 24px; margin: 0 12px; border-radius: 50%; background: var(--panel-border); display: flex; align-items: center; justify-content: center; }
+  .divider .dot-inner { width: 10px; height: 10px; border-radius: 50%; background: var(--steel); }
+  .bar { display: flex; width: 100%; height: 16px; border-radius: 999px; overflow: hidden; margin-bottom: 12px; }
+  .row3 { display: flex; justify-content: space-between; align-items: flex-start; }
+  .big { font-family: 'Oswald', sans-serif; font-size: 20px; font-weight: 600; }
+  .small { font-size: 12px; margin-top: 2px; color: var(--steel); }
+  .metaRow { font-size: 12px; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--panel-border); display: flex; justify-content: space-between; color: var(--steel); }
+  .metaRow span:last-child { color: var(--frost); }
+  .scoreRow { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .scoreRow .score { font-family: 'Oswald', sans-serif; font-weight: 600; width: 56px; color: var(--frost); }
+  .track { flex: 1; height: 8px; background: #0F1728; border-radius: 999px; overflow: hidden; }
+  .fill { height: 100%; background: var(--ice); border-radius: 999px; }
+  .pct { font-size: 14px; width: 48px; text-align: right; color: var(--steel); }
+  .ratingsRow { display: flex; align-items: center; gap: 8px; font-size: 14px; padding: 4px 0; }
+  .ratingsRow .rank { width: 20px; font-size: 12px; color: var(--steel); }
+  .ratingsRow .name { flex: 1; color: var(--frost); }
+  .ratingsRow .elo { font-family: 'Oswald', sans-serif; width: 40px; text-align: right; color: var(--frost); }
+  .ratingsRow .delta { width: 40px; text-align: right; font-size: 12px; }
+  .dots { display: flex; gap: 4px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .disclaimer { background: #0F1728; border: 1px solid var(--panel-border); border-radius: 16px; padding: 12px; font-size: 12px; line-height: 1.5; color: var(--steel); }
+  .ratingsBox { max-height: 210px; overflow-y: auto; padding-right: 4px; }
+  .toggle { width: 100%; background: none; border: none; color: var(--frost); font-size: 14px; font-weight: 500; text-align: left; cursor: pointer; display: flex; justify-content: space-between; padding: 0; }
+  .loglist { margin-top: 10px; font-size: 12px; color: var(--steel); max-height: 160px; overflow-y: auto; }
+  .loglist div { padding: 3px 0; border-bottom: 1px solid var(--panel-border); }
+  .status { text-align: center; color: var(--steel); padding: 24px 0; font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 class="display">Ottelun todennäköisyydet</h1>
+  <p class="subtitle">Lähtötaso ja tulokset haetaan automaattisesti liiga.fi:stä joka ilta. Ei vedonlyöntiä varten.</p>
+
+  <div class="card">
+    <button class="toggle" id="logToggle">
+      <span id="logCount">Ladataan ottelulokia…</span>
+      <span class="display" id="logCaret">+</span>
+    </button>
+    <div id="logList" class="loglist" style="display:none;"></div>
+  </div>
+
+  <div class="card">
+    <div class="label" style="color: var(--frost);">Voimaluvut lokin jälkeen</div>
+    <div class="ratingsBox" id="ratingsBox"></div>
+  </div>
+
+  <div class="card">
+    <label class="label" style="color: var(--ice);">Kotijoukkue</label>
+    <select id="homeSelect"></select>
+  </div>
+
+  <div class="divider"><div class="line"></div><div class="dot-outer"><div class="dot-inner"></div></div><div class="line"></div></div>
+
+  <div class="card">
+    <label class="label" style="color: var(--amber);">Vierasjoukkue</label>
+    <select id="awaySelect"></select>
+  </div>
+
+  <div id="result"></div>
+
+  <div class="disclaimer">
+    Lähtötaso ja ottelutulokset ovat oikeaa liiga.fi-dataa, päivittyvät automaattisesti joka ilta n. klo 23:50.
+    Tarkoitettu vain tilastolliseen hupikäyttöön kaveriporukassa — ei vedonlyöntiin.
+  </div>
+</div>
+
+<script>
+// --- Lähtötaso: kauden 2025-26 lopulliset maalit/ottelu (haettu liiga.fi/api/v2/standings) ---
+const BASE_TEAMS = [
+  { name: "Tappara", gf: 3.77, ga: 2.48 }, { name: "KooKoo", gf: 3.62, ga: 2.58 },
+  { name: "SaiPa", gf: 3.40, ga: 2.70 }, { name: "Ilves", gf: 3.10, ga: 2.53 },
+  { name: "Lukko", gf: 3.08, ga: 2.62 }, { name: "JYP", gf: 3.37, ga: 3.00 },
+  { name: "KalPa", gf: 3.08, ga: 2.98 }, { name: "Ässät", gf: 2.83, ga: 2.75 },
+  { name: "K-Espoo", gf: 2.62, ga: 2.58 }, { name: "HIFK", gf: 2.48, ga: 3.05 },
+  { name: "Pelicans", gf: 2.28, ga: 2.60 }, { name: "HPK", gf: 2.40, ga: 2.78 },
+  { name: "TPS", gf: 2.35, ga: 2.95 }, { name: "Kärpät", gf: 2.92, ga: 3.28 },
+  { name: "Jukurit", gf: 2.18, ga: 2.85 }, { name: "Sport", gf: 1.80, ga: 3.53 },
+  { name: "Jokerit", gf: 2.83, ga: 2.83 },
+];
+const START_ELO = 1500, HOME_ADV_ELO = 50, K_BASE = 20, FORM_ALPHA = 0.25, MAX_GOALS = 9;
+
+function factorial(n){let r=1;for(let i=2;i<=n;i++)r*=i;return r;}
+function poissonPmf(k,l){return (Math.exp(-l)*Math.pow(l,k))/factorial(k);}
+function pct(x){return `${Math.round(x*100)}\u00A0%`;}
+
+function parseLog(text){
+  const rows=[]; let skipped=0;
+  text.split("\n").forEach(line=>{
+    const t=line.trim(); if(!t) return;
+    const parts=t.split(";").map(p=>p.trim());
+    if(parts.length!==5){skipped++;return;}
+    const [date,home,hgS,away,agS]=parts;
+    const hg=Number(hgS), ag=Number(agS);
+    if(!date||!home||!away||Number.isNaN(hg)||Number.isNaN(ag)){skipped++;return;}
+    rows.push({date,home,hg,away,ag});
+  });
+  rows.sort((a,b)=>(a.date<b.date?-1:a.date>b.date?1:0));
+  return {rows,skipped};
+}
+function ensureTeam(state,name){
+  if(!state[name]){
+    const base=BASE_TEAMS.find(t=>t.name===name);
+    state[name]={elo:START_ELO,gf:base?base.gf:2.83,ga:base?base.ga:2.83,startElo:START_ELO,form:[]};
+  }
+  return state[name];
+}
+function processLog(rows){
+  const state={};
+  BASE_TEAMS.forEach(t=>ensureTeam(state,t.name));
+  rows.forEach(({home,hg,away,ag})=>{
+    const h=ensureTeam(state,home), a=ensureTeam(state,away);
+    const expectedHome=1/(1+Math.pow(10,-((h.elo+HOME_ADV_ELO-a.elo)/400)));
+    const homeWon=hg>ag;
+    const sHome=homeWon?1:hg===ag?0.5:0;
+    const margin=Math.abs(hg-ag)||1;
+    const winnerElo=homeWon?h.elo+HOME_ADV_ELO:a.elo;
+    const loserElo=homeWon?a.elo:h.elo+HOME_ADV_ELO;
+    const movMultiplier=Math.log(margin+1)*(2.2/((winnerElo-loserElo)*0.001+2.2));
+    const change=K_BASE*Math.max(movMultiplier,0.5)*(sHome-expectedHome);
+    h.elo+=change; a.elo-=change;
+    h.gf+=FORM_ALPHA*(hg-h.gf); h.ga+=FORM_ALPHA*(ag-h.ga);
+    a.gf+=FORM_ALPHA*(ag-a.gf); a.ga+=FORM_ALPHA*(hg-a.ga);
+    h.form=[...h.form, homeWon?"V":hg===ag?"T":"H"].slice(-5);
+    a.form=[...a.form, !homeWon&&hg!==ag?"V":hg===ag?"T":"H"].slice(-5);
+  });
+  return state;
+}
+function computeMatch(home,away,ratings){
+  const h=ratings[home], a=ratings[away];
+  const leagueAvg=Object.values(ratings).reduce((s,t)=>s+(t.gf+t.ga)/2,0)/Object.values(ratings).length;
+  const lambdaHome=leagueAvg*(h.gf/leagueAvg)*(a.ga/leagueAvg)*1.07;
+  const lambdaAway=leagueAvg*(a.gf/leagueAvg)*(h.ga/leagueAvg);
+  let pHome=0,pDraw=0,pAway=0; const scorelines=[];
+  for(let i=0;i<=MAX_GOALS;i++)for(let j=0;j<=MAX_GOALS;j++){
+    const p=poissonPmf(i,lambdaHome)*poissonPmf(j,lambdaAway);
+    if(i>j)pHome+=p; else if(i===j)pDraw+=p; else pAway+=p;
+    scorelines.push({h:i,a:j,p});
+  }
+  scorelines.sort((x,y)=>y.p-x.p);
+  const total=pHome+pDraw+pAway;
+  const eloWinProb=1/(1+Math.pow(10,-((h.elo+HOME_ADV_ELO-a.elo)/400)));
+  return {
+    lambdaHome,lambdaAway,pHome:pHome/total,pDraw:pDraw/total,pAway:pAway/total,
+    top:scorelines.slice(0,5).map(s=>({...s,p:s.p/total})), eloWinProb
+  };
+}
+
+// --- Sovelluksen tila ja renderöinti ---
+let ratings = {}, rows = [], skipped = 0, homeName = "HIFK", awayName = "Tappara";
+
+function renderRatings(){
+  const teamNames = Object.keys(ratings).sort((a,b)=>ratings[b].elo-ratings[a].elo);
+  const box = document.getElementById("ratingsBox");
+  box.innerHTML = teamNames.map((name,idx)=>{
+    const t = ratings[name];
+    const delta = Math.round(t.elo - t.startElo);
+    const deltaColor = delta>0?"var(--ice)":delta<0?"var(--amber)":"var(--steel)";
+    const dots = t.form.length ? t.form.map(r=>{
+      const c = r==="V"?"var(--ice)":r==="H"?"var(--amber)":"var(--steel)";
+      return `<span class="dot" style="background:${c}"></span>`;
+    }).join("") : `<span style="color:var(--steel);font-size:12px;">–</span>`;
+    return `<div class="ratingsRow">
+      <span class="rank">${idx+1}</span>
+      <span class="name">${name}</span>
+      <span class="dots">${dots}</span>
+      <span class="elo">${Math.round(t.elo)}</span>
+      <span class="delta" style="color:${deltaColor}">${delta>0?"+":""}${delta}</span>
+    </div>`;
+  }).join("");
+  return teamNames;
+}
+
+function populateSelects(teamNames){
+  const homeSel = document.getElementById("homeSelect");
+  const awaySel = document.getElementById("awaySelect");
+  const opts = teamNames.map(n=>`<option value="${n}">${n}</option>`).join("");
+  homeSel.innerHTML = opts; awaySel.innerHTML = opts;
+  homeSel.value = teamNames.includes(homeName) ? homeName : teamNames[0];
+  awaySel.value = teamNames.includes(awayName) ? awayName : teamNames[1];
+  homeName = homeSel.value; awayName = awaySel.value;
+  homeSel.onchange = () => { homeName = homeSel.value; renderResult(); };
+  awaySel.onchange = () => { awayName = awaySel.value; renderResult(); };
+}
+
+function renderResult(){
+  const el = document.getElementById("result");
+  if(homeName === awayName){
+    el.innerHTML = `<p class="status">Valitse kaksi eri joukkuetta.</p>`;
+    return;
+  }
+  const r = computeMatch(homeName, awayName, ratings);
+  el.innerHTML = `
+    <div class="card">
+      <div class="bar">
+        <div style="width:${r.pHome*100}%;background:var(--ice)"></div>
+        <div style="width:${r.pDraw*100}%;background:var(--steel)"></div>
+        <div style="width:${r.pAway*100}%;background:var(--amber)"></div>
+      </div>
+      <div class="row3">
+        <div><div class="big" style="color:var(--ice)">${pct(r.pHome)}</div><div class="small">${homeName} voittaa</div></div>
+        <div style="text-align:center;"><div class="big" style="color:var(--steel)">${pct(r.pDraw)}</div><div class="small">tasan 60 min,<br/>jatkoon</div></div>
+        <div style="text-align:right;"><div class="big" style="color:var(--amber)">${pct(r.pAway)}</div><div class="small">${awayName} voittaa</div></div>
+      </div>
+      <div class="metaRow"><span>Odotettu maalimäärä</span><span>${homeName} ${r.lambdaHome.toFixed(1)} – ${r.lambdaAway.toFixed(1)} ${awayName}</span></div>
+      <div class="metaRow"><span>Elo-arvio koko ottelun voittajasta</span><span>${homeName} ${pct(r.eloWinProb)}</span></div>
+    </div>
+    <div class="card">
+      <div class="label" style="color:var(--frost);margin-bottom:10px;">Todennäköisimmät lopputulokset</div>
+      ${r.top.map(s=>`
+        <div class="scoreRow">
+          <span class="score display">${s.h}–${s.a}</span>
+          <div class="track"><div class="fill" style="width:${(s.p/r.top[0].p)*100}%"></div></div>
+          <span class="pct">${pct(s.p)}</span>
+        </div>`).join("")}
+    </div>
+  `;
+}
+
+async function init(){
+  try {
+    const res = await fetch("data/ottelut.csv", { cache: "no-store" });
+    const text = await res.text();
+    const parsed = parseLog(text);
+    rows = parsed.rows; skipped = parsed.skipped;
+  } catch (e) {
+    rows = []; skipped = 0;
+  }
+  ratings = processLog(rows);
+  document.getElementById("logCount").textContent =
+    `Ottelulokia (${rows.length} ottelua${skipped ? `, ${skipped} riviä ohitettu` : ""})`;
+  document.getElementById("logList").innerHTML =
+    rows.slice().reverse().map(r=>`<div>${r.date} · ${r.home} ${r.hg}–${r.ag} ${r.away}</div>`).join("");
+
+  const teamNames = renderRatings();
+  populateSelects(teamNames);
+  renderResult();
+}
+
+document.getElementById("logToggle").addEventListener("click", () => {
+  const list = document.getElementById("logList");
+  const caret = document.getElementById("logCaret");
+  const open = list.style.display !== "none";
+  list.style.display = open ? "none" : "block";
+  caret.textContent = open ? "+" : "−";
+});
+
+init();
+</script>
+</body>
+</html>
