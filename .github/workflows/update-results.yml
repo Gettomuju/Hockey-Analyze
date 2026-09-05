@@ -31,8 +31,15 @@ jobs:
           FORCE_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.force || 'false' }}
         run: node scripts/update-results.mjs
 
+      - name: Hae pelaajatilastot liiga.fi:stä
+        env:
+          FORCE_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.force || 'false' }}
+        # Oma rinnakkainen skripti: jos tämä epäonnistuu (esim. liiga.fi muuttaa pelaaja-
+        # rajapintaansa), se ei saa kaataa koko ajoa eikä estää ottelutulosten committausta.
+        run: node scripts/update-players.mjs || echo "Pelaajatilastojen haku epäonnistui, jatketaan silti."
+
       - name: Committaa muutokset, jos uusia tuloksia löytyi
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "Päivitä ottelutulokset (automaattinen)"
-          file_pattern: "data/ottelut.csv"
+          commit_message: "Päivitä ottelutulokset ja pelaajatilastot (automaattinen)"
+          file_pattern: "data/ottelut.csv data/pelaajat.csv"
