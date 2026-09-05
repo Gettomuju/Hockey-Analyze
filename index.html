@@ -55,6 +55,24 @@
   .loglist { margin-top: 10px; font-size: 12px; color: var(--steel); max-height: 160px; overflow-y: auto; }
   .loglist div { padding: 3px 0; border-bottom: 1px solid var(--panel-border); }
   .status { text-align: center; color: var(--steel); padding: 24px 0; font-size: 14px; }
+  .rosterCol { margin-top: 12px; }
+  .rosterCol:first-child { margin-top: 0; }
+  .rosterHead { font-family: 'Oswald', sans-serif; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  .rosterTableHead { display: flex; align-items: center; gap: 8px; font-size: 10px; color: var(--steel); padding: 0 0 4px; }
+  .rosterTableHead .pname { flex: 1; }
+  .rosterTableHead .pstat { width: 22px; text-align: right; }
+  .playerRow { display: flex; align-items: center; gap: 8px; font-size: 12px; padding: 4px 0; border-bottom: 1px solid var(--panel-border); }
+  .playerRow .pname { flex: 1; color: var(--frost); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .playerRow .pstat { color: var(--steel); width: 22px; text-align: right; font-family: 'Oswald', sans-serif; }
+  .playerRow .pstat.pts { color: var(--frost); font-weight: 600; }
+  .goalieNote { font-size: 11px; color: var(--steel); margin-top: 6px; line-height: 1.4; }
+  .scorerRow { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 5px 0; border-bottom: 1px solid var(--panel-border); }
+  .scorerRow:last-child { border-bottom: none; }
+  .scorerRow .sideDot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .scorerRow .pname { flex: 1; color: var(--frost); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .scorerRow .pteam { color: var(--steel); font-size: 11px; }
+  .scorerRow .pexp { font-family: 'Oswald', sans-serif; font-weight: 600; color: var(--frost); width: 40px; text-align: right; }
+  .emptyNote { font-size: 12px; color: var(--steel); padding: 8px 0; }
 </style>
 </head>
 <body>
@@ -85,6 +103,14 @@
   <div class="card">
     <label class="label" style="color: var(--amber);">Vierasjoukkue</label>
     <select id="awaySelect"></select>
+  </div>
+
+  <div class="card">
+    <button class="toggle" id="rosterToggle">
+      <span>Joukkueiden pelaajat</span>
+      <span class="display" id="rosterCaret">+</span>
+    </button>
+    <div id="rosterBox" style="display:none;"></div>
   </div>
 
   <div id="result"></div>
@@ -176,8 +202,102 @@ function computeMatch(home,away,ratings){
   };
 }
 
+// --- Pelaajatilastot (data/pelaajat.csv) ---
+// Rivimuoto: rooli;joukkue;nimi;ottelut;maalit;syotot;pisteet;jaanaikaKaSek;plusmiinus
+// (tuottaa scripts/update-players.mjs, ks. sen kommentit siitä miksi maalivahdeilla ei ole
+// torjunta-%/päästettyjä maaleja — liiga.fi:n rajapinnassa ei ole niitä pelaajakohtaisesti).
+function parsePlayers(text) {
+  const byTeam = {};
+  text.split("\n").forEach((line) => {
+    const t = line.trim();
+    if (!t) return;
+    const parts = t.split(";");
+    if (parts.length !== 9) return;
+    const [role, team, name, pelit, maalit, syotot, pisteet, toiSek, plusmiinus] = parts;
+    if (!team || !name) return;
+    if (!byTeam[team]) byTeam[team] = { skaters: [], goalies: [] };
+    const rec = {
+      name, team,
+      playedGames: Number(pelit) || 0,
+      goals: Number(maalit) || 0,
+      assists: Number(syotot) || 0,
+      points: Number(pisteet) || 0,
+      toiAvg: Number(toiSek) || 0,
+      plusMinus: Number(plusmiinus) || 0,
+    };
+    if (role === "MV") byTeam[team].goalies.push(rec);
+    else byTeam[team].skaters.push(rec);
+  });
+  Object.values(byTeam).forEach((t) => {
+    t.skaters.sort((a, b) => b.points - a.points);
+    t.goalies.sort((a, b) => b.playedGames - a.playedGames);
+  });
+  return byTeam;
+}
+
+function fmtToi(sec) {
+  if (!sec) return "–";
+  const m = Math.floor(sec / 60), s = Math.round(sec % 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+// odotetutPisteet(pelaaja) = pisteet/ottelu-keskiarvo × (joukkueen odotettu maalimäärä
+// TÄSSÄ ottelussa [Poisson-lambda] / joukkueen kauden maalikeskiarvo [sama gf-arvo jota
+// malli itse käyttää lambdan laskennassa]) — yksinkertainen, läpinäkyvä lähtöheuristiikka.
+// Ei huomioi esim. ylivoimaminuutteja tai vastustajan puolustusta pelaajakohtaisesti.
+function expectedScorers(home, away, r) {
+  const list = [];
+  const addTeam = (teamName, lambda, side) => {
+    const team = playersByTeam[teamName];
+    const seasonGf = ratings[teamName] ? ratings[teamName].gf : null;
+    if (!team || !seasonGf) return;
+    team.skaters.forEach((p) => {
+      if (p.playedGames < 1) return;
+      const ppg = p.points / p.playedGames;
+      if (ppg <= 0) return;
+      const exp = ppg * (lambda / seasonGf);
+      list.push({ name: p.name, team: teamName, side, exp });
+    });
+  };
+  addTeam(home, r.lambdaHome, "home");
+  addTeam(away, r.lambdaAway, "away");
+  list.sort((a, b) => b.exp - a.exp);
+  return list.slice(0, 6);
+}
+
+function renderRoster() {
+  const box = document.getElementById("rosterBox");
+  const teamBlock = (teamName, accent) => {
+    const team = playersByTeam[teamName];
+    if (!team) {
+      return `<div class="rosterCol"><div class="rosterHead" style="color:${accent}">${teamName}</div><div class="emptyNote">Pelaajadataa ei vielä saatavilla.</div></div>`;
+    }
+    const skaters = team.skaters.filter((p) => p.playedGames > 0).slice(0, 6);
+    const skaterRows = skaters.length
+      ? skaters.map((p) => `
+        <div class="playerRow">
+          <span class="pname">${p.name}</span>
+          <span class="pstat">${p.goals}</span>
+          <span class="pstat">${p.assists}</span>
+          <span class="pstat pts">${p.points}</span>
+        </div>`).join("")
+      : `<div class="emptyNote">Ei vielä pelattuja otteluita.</div>`;
+    const goalie = team.goalies[0];
+    const goalieNote = goalie
+      ? `<div class="goalieNote">Maalivahti ${goalie.name}: ${goalie.playedGames} ottelua, jäähän aika ${fmtToi(goalie.toiAvg)}/ottelu. (Torjunta-% ei ole liiga.fi:n rajapinnassa pelaajakohtaisesti saatavilla.)</div>`
+      : "";
+    return `<div class="rosterCol">
+      <div class="rosterHead" style="color:${accent}">${teamName}</div>
+      <div class="rosterTableHead"><span class="pname">Pelaaja</span><span class="pstat">M</span><span class="pstat">S</span><span class="pstat">P</span></div>
+      ${skaterRows}
+      ${goalieNote}
+    </div>`;
+  };
+  box.innerHTML = teamBlock(homeName, "var(--ice)") + teamBlock(awayName, "var(--amber)");
+}
+
 // --- Sovelluksen tila ja renderöinti ---
-let ratings = {}, rows = [], skipped = 0, homeName = "HIFK", awayName = "Tappara";
+let ratings = {}, rows = [], skipped = 0, homeName = "HIFK", awayName = "Tappara", playersByTeam = {};
 
 function renderRatings(){
   const teamNames = Object.keys(ratings).sort((a,b)=>ratings[b].elo-ratings[a].elo);
@@ -209,8 +329,8 @@ function populateSelects(teamNames){
   homeSel.value = teamNames.includes(homeName) ? homeName : teamNames[0];
   awaySel.value = teamNames.includes(awayName) ? awayName : teamNames[1];
   homeName = homeSel.value; awayName = awaySel.value;
-  homeSel.onchange = () => { homeName = homeSel.value; renderResult(); };
-  awaySel.onchange = () => { awayName = awaySel.value; renderResult(); };
+  homeSel.onchange = () => { homeName = homeSel.value; renderResult(); renderRoster(); };
+  awaySel.onchange = () => { awayName = awaySel.value; renderResult(); renderRoster(); };
 }
 
 function renderResult(){
@@ -244,7 +364,29 @@ function renderResult(){
           <span class="pct">${pct(s.p)}</span>
         </div>`).join("")}
     </div>
+    ${renderScorersCard(homeName, awayName, r)}
   `;
+}
+
+function renderScorersCard(home, away, r) {
+  const scorers = expectedScorers(home, away, r);
+  if (scorers.length === 0) {
+    return `<div class="card">
+      <div class="label" style="color:var(--frost);margin-bottom:6px;">Todennäköisimmät pisteentekijät</div>
+      <div class="emptyNote">Pelaajadataa ei vielä saatavilla tälle ottelulle.</div>
+    </div>`;
+  }
+  return `<div class="card">
+    <div class="label" style="color:var(--frost);margin-bottom:6px;">Todennäköisimmät pisteentekijät</div>
+    ${scorers.map((s) => `
+      <div class="scorerRow">
+        <span class="sideDot" style="background:${s.side === "home" ? "var(--ice)" : "var(--amber)"}"></span>
+        <span class="pname">${s.name}</span>
+        <span class="pteam">${s.team}</span>
+        <span class="pexp">${s.exp.toFixed(2)}</span>
+      </div>`).join("")}
+    <div class="goalieNote">Odotettu pistemäärä = pelaajan pisteet/ottelu × (joukkueen odotettu maalimäärä tässä ottelussa ÷ joukkueen kauden maalikeskiarvo). Karkea, läpinäkyvä arvio — ei huomioi esim. ylivoimaminuutteja.</div>
+  </div>`;
 }
 
 async function init(){
@@ -262,9 +404,19 @@ async function init(){
   document.getElementById("logList").innerHTML =
     rows.slice().reverse().map(r=>`<div>${r.date} · ${r.home} ${r.hg}–${r.ag} ${r.away}</div>`).join("");
 
+  // Pelaajatilastot haetaan erikseen omalla try/catchilla: jos data/pelaajat.csv puuttuu tai
+  // sen haku epäonnistuu, ottelutodennäköisyys-näkymä toimii silti normaalisti.
+  try {
+    const pres = await fetch("data/pelaajat.csv", { cache: "no-store" });
+    playersByTeam = parsePlayers(await pres.text());
+  } catch (e) {
+    playersByTeam = {};
+  }
+
   const teamNames = renderRatings();
   populateSelects(teamNames);
   renderResult();
+  renderRoster();
 }
 
 document.getElementById("logToggle").addEventListener("click", () => {
@@ -272,6 +424,14 @@ document.getElementById("logToggle").addEventListener("click", () => {
   const caret = document.getElementById("logCaret");
   const open = list.style.display !== "none";
   list.style.display = open ? "none" : "block";
+  caret.textContent = open ? "+" : "−";
+});
+
+document.getElementById("rosterToggle").addEventListener("click", () => {
+  const box = document.getElementById("rosterBox");
+  const caret = document.getElementById("rosterCaret");
+  const open = box.style.display !== "none";
+  box.style.display = open ? "none" : "block";
   caret.textContent = open ? "+" : "−";
 });
 
