@@ -1,8 +1,8 @@
-H;TPS;Lukas Wernblom;2;2;6;8;727;3
-H;TPS;Lars Bryggman;2;4;2;6;716;3
+H;TPS;Lukas Wernblom;2;2;6;8;727;2
+H;TPS;Lars Bryggman;2;4;2;6;716;2
 H;K-Espoo;Lukas Svejkovsky;2;4;2;6;550;3
 H;HPK;Sami Päivärinta;3;4;2;6;1030;1
-H;TPS;Lukas Haudum;2;1;4;5;739;3
+H;TPS;Lukas Haudum;2;1;4;5;739;2
 H;Jokerit;Emil Kuusla;2;1;4;5;612;2
 H;Ilves;Benjamin Korhonen;3;3;1;4;925;-1
 H;JYP;Alexander True;1;1;3;4;663;3
@@ -15,7 +15,7 @@ H;Ilves;Luke Henman;3;1;3;4;888;0
 H;K-Espoo;Arttu Tuomaala;2;2;1;3;738;-1
 H;Ässät;Carl Klingberg;1;1;2;3;493;0
 H;Pelicans;Roni Karvinen;2;2;1;3;692;1
-H;TPS;Alexis Binner;2;0;3;3;649;2
+H;TPS;Alexis Binner;2;0;3;3;649;1
 H;Ässät;Rami Määttä;2;0;3;3;861;1
 H;Pelicans;Sakke Hämäläinen;2;0;3;3;512;3
 H;Pelicans;Liam Hawel;2;0;3;3;525;2
@@ -42,7 +42,7 @@ H;HIFK;Lassi Vanhatalo;2;1;1;2;643;-1
 H;Lukko;Daniil Trakht;2;1;1;2;386;-1
 H;SaiPa;Aarne Intonen;1;0;2;2;810;-1
 H;JYP;Harri Pesonen;1;1;1;2;540;-1
-H;Sport;Simon Åkerström;3;0;2;2;1072;-3
+H;Sport;Simon Åkerström;3;0;2;2;1072;-2
 H;Lukko;Jakob Stenqvist;2;0;2;2;801;0
 H;Ässät;Arttu Alasiurua;2;1;1;2;498;1
 H;Kärpät;Roni Hirvonen;2;0;2;2;1078;-1
@@ -152,9 +152,9 @@ H;SaiPa;Miikka Salomäki;1;0;1;1;1003;1
 H;Ässät;Balázs Sebok;0;0;1;1;0;1
 H;Lukko;Peetro Seppälä;2;0;1;1;748;2
 H;HPK;Arturs Andzans;3;0;1;1;718;-1
-H;Sport;Johan Sundström;3;0;1;1;835;-3
+H;Sport;Johan Sundström;3;0;1;1;835;-2
 H;Sport;Kalle Miketinac;3;1;0;1;762;-3
-H;Sport;Theodor Johnsson;3;0;1;1;695;0
+H;Sport;Theodor Johnsson;3;0;1;1;695;1
 H;Sport;Kalle Ervasti;2;0;1;1;486;-1
 MV;HIFK;Tim Juel;2;0;1;1;2360;-1
 H;K-Espoo;Carter King;2;1;0;1;566;2
@@ -313,7 +313,7 @@ H;Kärpät;Tuukka Tieksola;0;0;0;0;0;0
 H;Kärpät;Tommi Tikka;2;0;0;0;823;0
 H;Ässät;Petteri Nurmi;2;0;0;0;725;0
 H;K-Espoo;Juho Keinänen;0;0;0;0;0;0
-MV;Sport;Joni Ortio;3;0;0;0;2104;-3
+MV;Sport;Joni Ortio;3;0;0;0;2104;-2
 H;Ilves;Otto Latvala;3;0;0;0;823;0
 H;Lukko;Jasu Mensonen;0;0;0;0;0;0
 H;Jokerit;Oliver Larsen;2;0;0;0;961;-3
@@ -361,7 +361,7 @@ H;HPK;Olli Korhonen;3;0;0;0;921;-3
 H;Lukko;Aapo Vanninen;2;0;0;0;513;0
 H;Ässät;Kasperi Ojantakanen;2;0;0;0;409;-1
 H;Pelicans;Eerik Kolehmainen;0;0;0;0;0;0
-MV;TPS;Eetu Mäkiniemi;3;0;0;0;3575;1
+MV;TPS;Eetu Mäkiniemi;3;0;0;0;3575;0
 H;Kärpät;Aleksi Antti-Roiko;2;0;0;0;770;0
 H;HIFK;Niko Huuhtanen;2;0;0;0;591;-1
 H;Pelicans;Hampus Falk;2;0;0;0;628;0
